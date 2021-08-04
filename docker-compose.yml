@@ -1,0 +1,31 @@
+version: '3.1'
+
+services:
+
+  mysql:
+    hostname: mysql
+    container_name: sw_task_mysql
+    image: sw/mysql
+    build: 
+      context: ./mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: swt4sks
+    ports:
+      - 3306:3306
+
+  rabbitmq:
+    image: rabbitmq:management-alpine
+    container_name: sw_task_rabbitmq
+    hostname: rabbitmq
+    ports:
+      - 15672:15672
+
+  redis:
+    image: redis
+    container_name: fs_redis
+    hostname: redis
+    
+networks:
+  default:
+    external: true
+    name: sw_task_be

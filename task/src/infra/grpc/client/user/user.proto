@@ -1,0 +1,16 @@
+syntax = "proto3";
+package grpc_user;
+
+option go_package = "/grpc_user";
+
+message User {
+    int32 id = 1;
+    string firstName = 2;
+    string lastName = 3;
+    string email = 4;
+    string role = 5;
+}
+
+service UserService {
+    rpc Get(User) returns (User) {}
+}

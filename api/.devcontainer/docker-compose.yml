@@ -1,0 +1,26 @@
+version: '3.4'
+
+# if you want to use this docker-compose, clone the docker repository:
+# https://bitbucket.org/foursource/docker
+
+services:
+  api-manager:
+    hostname: api
+    container_name: sw_task_api
+    build:
+      context: .
+    image: sword-health/go
+    env_file:
+      .env
+    networks: 
+      - backend
+    volumes: 
+      - "../src:/go/src"
+    ports: 
+      - "8000:8000"
+    command:
+      - air
+networks:
+  backend:
+    external: true
+    name: sw_task_be

@@ -1,0 +1,43 @@
+syntax = "proto3";
+package grpc_task;
+
+option go_package = "/grpc_task";
+
+message Task {
+    int32 id = 1;
+    string summary = 2;
+    int32 ownerId = 3;
+    string status = 4;
+    string when = 5;
+    string firstName=6 [json_name="first_name"];
+    string lastName=7 [json_name="last_name"];
+    string email=8 [json_name="email"];
+}
+
+message TaskRequest {
+    int32 id = 1;
+    string summary = 2;
+    int32 ownerTaskId = 3;
+    int32 userLoggerId = 4;
+    string userLoggerRole = 5;
+    string status = 6;
+    string when = 7;
+}
+
+message TasksListRequest {
+    int32 userLoggerId = 1;
+    string userLoggerRole = 2;
+    int32 ownerTaskId = 3;
+    int32 limit = 4;
+}
+
+message TaskList {
+    repeated Task tasks = 1;
+}
+
+service TaskService {
+    rpc CreateTaskRequest(TaskRequest) returns (Task) {}
+    rpc ListTasksRequest(TasksListRequest) returns (TaskList) {}
+    rpc FindOneTaskRequest(TaskRequest) returns (Task) {}
+    rpc UpdateTaskRequest(TaskRequest) returns (Task) {}
+}
