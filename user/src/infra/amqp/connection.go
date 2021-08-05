@@ -3,7 +3,7 @@ package amqp
 import (
 	"fmt"
 	"log"
-	"sword-health/users/application/command"
+	"sword-health/user/application/command"
 
 	"github.com/streadway/amqp"
 )

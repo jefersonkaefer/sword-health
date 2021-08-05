@@ -3,8 +3,8 @@ package command
 import (
 	"encoding/json"
 	"log"
-	"sword-health/users/application/dto"
-	"sword-health/users/application/services"
+	"sword-health/user/application/dto"
+	"sword-health/user/application/services"
 )
 
 type UserHandler struct {

@@ -1,9 +1,8 @@
 package repositories
 
 import (
-	"fmt"
-	"sword-health/users/application/data_model"
-	"sword-health/users/domain"
+	"sword-health/user/application/data_model"
+	"sword-health/user/domain"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -21,17 +20,12 @@ func (UserRepository) New(redis *redis.Client, db *gorm.DB) *UserRepository {
 	}
 }
 
-func (r *UserRepository) Add(u *domain.UserModel) bool {
+func (r *UserRepository) Add(u *domain.UserModel) (user *data_model.User, err error) {
+	user = u.GetDataModel()
 
-	r.db.
-		Where(
-			data_model.User{
-				Email: u.GetEmail(),
-			},
-		).
-		FirstOrCreate(u.GetDataModel())
-	fmt.Println(u)
-	return r.db.RowsAffected > 0
+	r.db.Save(user)
+
+	return user, r.db.Error
 }
 
 func (r *UserRepository) FindByEmail(email string) *domain.UserModel {

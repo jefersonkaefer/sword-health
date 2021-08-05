@@ -26,6 +26,7 @@ type TaskServiceClient interface {
 	ListTasksRequest(ctx context.Context, in *TasksListRequest, opts ...grpc.CallOption) (*TaskList, error)
 	FindOneTaskRequest(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*Task, error)
 	UpdateTaskRequest(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*Task, error)
+	DeleteTaskRequest(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*Task, error)
 }
 
 type taskServiceClient struct {
@@ -72,6 +73,15 @@ func (c *taskServiceClient) UpdateTaskRequest(ctx context.Context, in *TaskReque
 	return out, nil
 }
 
+func (c *taskServiceClient) DeleteTaskRequest(ctx context.Context, in *TaskRequest, opts ...grpc.CallOption) (*Task, error) {
+	out := new(Task)
+	err := c.cc.Invoke(ctx, "/grpc_task.TaskService/DeleteTaskRequest", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // TaskServiceServer is the server API for TaskService service.
 // All implementations must embed UnimplementedTaskServiceServer
 // for forward compatibility
@@ -80,6 +90,7 @@ type TaskServiceServer interface {
 	ListTasksRequest(context.Context, *TasksListRequest) (*TaskList, error)
 	FindOneTaskRequest(context.Context, *TaskRequest) (*Task, error)
 	UpdateTaskRequest(context.Context, *TaskRequest) (*Task, error)
+	DeleteTaskRequest(context.Context, *TaskRequest) (*Task, error)
 	mustEmbedUnimplementedTaskServiceServer()
 }
 
@@ -98,6 +109,9 @@ func (UnimplementedTaskServiceServer) FindOneTaskRequest(context.Context, *TaskR
 }
 func (UnimplementedTaskServiceServer) UpdateTaskRequest(context.Context, *TaskRequest) (*Task, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateTaskRequest not implemented")
+}
+func (UnimplementedTaskServiceServer) DeleteTaskRequest(context.Context, *TaskRequest) (*Task, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteTaskRequest not implemented")
 }
 func (UnimplementedTaskServiceServer) mustEmbedUnimplementedTaskServiceServer() {}
 
@@ -184,6 +198,24 @@ func _TaskService_UpdateTaskRequest_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _TaskService_DeleteTaskRequest_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(TaskRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(TaskServiceServer).DeleteTaskRequest(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/grpc_task.TaskService/DeleteTaskRequest",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(TaskServiceServer).DeleteTaskRequest(ctx, req.(*TaskRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // TaskService_ServiceDesc is the grpc.ServiceDesc for TaskService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +238,10 @@ var TaskService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "UpdateTaskRequest",
 			Handler:    _TaskService_UpdateTaskRequest_Handler,
+		},
+		{
+			MethodName: "DeleteTaskRequest",
+			Handler:    _TaskService_DeleteTaskRequest_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

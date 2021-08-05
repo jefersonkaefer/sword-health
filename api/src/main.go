@@ -1,6 +1,7 @@
 package main
 
 import (
+	grpc_notification "sword-health/api/grpc/notification"
 	grpc_user "sword-health/api/grpc/user"
 
 	grpc_task "sword-health/api/grpc/task"
@@ -40,18 +41,6 @@ func main() {
 			container.Controller.Task.Update(c)
 		})
 
-	user := router.
-		Group("/user").
-		Use(middleware.IsManager())
-	{
-		user.PUT("/:id", func(c *gin.Context) {
-			container.Controller.User.Update(c)
-		})
-		user.DELETE("/:id", func(c *gin.Context) {
-			container.Controller.User.Delete(c)
-		})
-	}
-
 	tasks := router.
 		Group("/task").
 		Use(middleware.VerifyToken()).
@@ -63,11 +52,22 @@ func main() {
 			}).
 			GET("/:id", func(c *gin.Context) {
 				container.Controller.Task.Get(c)
-			}).
-			DELETE("/:id", func(c *gin.Context) {
-				container.Controller.Task.Delete(c)
 			})
 	}
+	notification := router.
+		Group("/notification").
+		Use(middleware.VerifyToken()).
+		Use(middleware.IsManager())
+	{
+		notification.
+			GET("", func(c *gin.Context) {
+				container.Controller.Notification.List(c)
+			}).
+			GET("/:id", func(c *gin.Context) {
+				container.Controller.Notification.Get(c)
+			})
+	}
+
 	container.Run()
 	router.Run(":8000")
 
@@ -76,12 +76,16 @@ func main() {
 func initGrpcConnection(c *providers.Container) {
 
 	c.Grpc.User = &grpc_user.UserClient{}
-	c.Grpc.User.CreateConnection("users", 5000)
+	c.Grpc.User.CreateConnection("user", 5000)
 	c.Grpc.User.Start()
 
 	c.Grpc.Task = &grpc_task.TaskClient{}
 	c.Grpc.Task.CreateConnection("task", 5000)
 	c.Grpc.Task.Start()
+
+	c.Grpc.Notification = &grpc_notification.NotificationClient{}
+	c.Grpc.Notification.CreateConnection("notification", 5000)
+	c.Grpc.Notification.Start()
 }
 
 func initAmqpConnection(c *providers.Container) {

@@ -23,6 +23,11 @@ type TaskUpdateDTO struct {
 	UserLoggedRole string `json:"user_logged_role"`
 }
 
+type TaskDeleteDTO struct {
+	Id           int `json:"id"`
+	UserLoggedId int `json:"user_logged_id"`
+}
+
 type FindTask struct {
 	Id           int    `json:"id"`
 	OwnerId      int    `json:"owner_id"`

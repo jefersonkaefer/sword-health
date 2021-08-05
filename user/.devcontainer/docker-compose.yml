@@ -4,9 +4,9 @@ version: '3.4'
 # https://bitbucket.org/foursource/docker
 
 services:
-  users:
-    hostname: users
-    container_name: sw_task_users
+  user:
+    hostname: user
+    container_name: sw_task_user
     build:
       context: .
     image: sword-health/go

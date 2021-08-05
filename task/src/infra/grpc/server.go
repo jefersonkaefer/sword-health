@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"sword-health/task/application/command"
+	"sword-health/task/application/data_model"
 	"sword-health/task/application/dto"
 	"time"
 
@@ -56,17 +57,15 @@ func (s *Server) Start(cmdService *command.TaskHandler, port int) {
 }
 
 func (s *Server) ListTasksRequest(ctx context.Context, in *TasksListRequest) (list *TaskList, err error) {
+	list = &TaskList{}
 
-	requestDTO := &dto.FindTask{
-		OwnerId:      int(in.GetOwnerTaskId()),
-		Role:         in.GetUserLoggerRole(),
-		Limit:        int(in.GetLimit()),
-		UserLoggedId: int(in.GetUserLoggerId()),
-	}
+	listTasks, err := s.cmdService.Read().ListTasks(
+		int(in.GetUserLoggedId()),
+		int(in.GetOwnerTaskId()),
+		int(in.GetLimit()),
+	)
 
-	tasks := s.cmdService.Read().ListTasks(requestDTO)
-
-	for _, task := range tasks {
+	for _, task := range listTasks {
 		taskResponse := &Task{
 			Id:        int32(task.ID),
 			Summary:   task.Summary,
@@ -76,6 +75,7 @@ func (s *Server) ListTasksRequest(ctx context.Context, in *TasksListRequest) (li
 			Email:     task.OwnerEmail,
 			When:      task.GetWhen(),
 		}
+
 		list.Tasks = append(list.Tasks, taskResponse)
 	}
 
@@ -83,36 +83,31 @@ func (s *Server) ListTasksRequest(ctx context.Context, in *TasksListRequest) (li
 
 }
 
-func (s *Server) FindOneTaskRequest(ctx context.Context, in *TaskRequest) (*Task, error) {
+func (s *Server) FindOneTaskRequest(ctx context.Context, in *TaskRequest) (task *Task, err error) {
 
-	requestDTO := &dto.FindTask{
-		Id:           int(in.GetId()),
-		OwnerId:      int(in.GetOwnerTaskId()),
-		Role:         in.GetUserLoggerRole(),
-		UserLoggedId: int(in.GetUserLoggerId()),
-	}
+	var taskDataModel *data_model.Task
 
-	response := Task{}
+	taskDataModel, err = s.cmdService.Read().FindOne(
+		int(in.GetId()),
+		int(in.GetUserLoggedId()),
+	)
 
-	task, err := s.cmdService.Read().FindOne(requestDTO)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return &response, status.Error(http.StatusNotFound, "Task not found.")
+			return task, status.Error(http.StatusNotFound, "Task not found.")
 		}
-		return &response, status.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
+		return task, status.Error(http.StatusInternalServerError, http.StatusText(http.StatusInternalServerError))
 	}
 
-	response = Task{
-		Id:        int32(task.ID),
-		Summary:   task.Summary,
-		Status:    task.Status,
-		When:      task.GetWhen(),
-		FirstName: task.OwnerFirstName,
-		LastName:  task.OwnerLastName,
-		Email:     task.OwnerEmail,
-	}
-
-	return &response, err
+	return &Task{
+		Id:        int32(taskDataModel.ID),
+		Summary:   taskDataModel.Summary,
+		Status:    taskDataModel.Status,
+		When:      taskDataModel.GetWhen(),
+		FirstName: taskDataModel.OwnerFirstName,
+		LastName:  taskDataModel.OwnerLastName,
+		Email:     taskDataModel.OwnerEmail,
+	}, err
 
 }
 
@@ -144,8 +139,8 @@ func (s *Server) UpdateTaskRequest(ctx context.Context, in *TaskRequest) (*Task,
 		Id:             int(in.GetId()),
 		Summary:        in.GetSummary(),
 		Status:         in.GetStatus(),
-		UserLoggedId:   int(in.GetUserLoggerId()),
-		UserLoggedRole: in.GetUserLoggerRole(),
+		UserLoggedId:   int(in.GetUserLoggedId()),
+		UserLoggedRole: in.GetUserLoggedRole(),
 	}
 	task, err := s.cmdService.Write().Update(taskRequest)
 
@@ -162,5 +157,22 @@ func (s *Server) UpdateTaskRequest(ctx context.Context, in *TaskRequest) (*Task,
 		LastName:  task.OwnerLastName,
 		Email:     task.OwnerEmail,
 	}, nil
+
+}
+
+func (s *Server) DeleteTaskRequest(ctx context.Context, in *TaskRequest) (*Task, error) {
+
+	taskRequest := dto.TaskUpdateDTO{
+		Id:           int(in.GetId()),
+		UserLoggedId: int(in.GetUserLoggedId()),
+	}
+
+	err := s.cmdService.Write().Delete(taskRequest)
+
+	if err != nil {
+		return &Task{}, status.Error(http.StatusBadRequest, err.Error())
+	}
+
+	return &Task{}, nil
 
 }

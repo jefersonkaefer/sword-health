@@ -35,7 +35,6 @@ func NewConnection(user string, password string, host string, port int) *Connect
 	if err != nil {
 		fmt.Println("ERROR::: ", err)
 	}
-	fmt.Println("me contactando...", r)
 	return &r
 }
 

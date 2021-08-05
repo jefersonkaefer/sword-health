@@ -1,9 +1,10 @@
 package services
 
 import (
-	"sword-health/users/application/dto"
-	"sword-health/users/application/repositories"
-	"sword-health/users/domain"
+	"sword-health/user/application/data_model"
+	"sword-health/user/application/dto"
+	"sword-health/user/application/repositories"
+	"sword-health/user/domain"
 )
 
 type WriteService struct {
@@ -16,16 +17,16 @@ func (WriteService) New(repository *repositories.UserRepository) *WriteService {
 	}
 }
 
-func (us *WriteService) Create(user dto.UserCreateDTO) {
+func (us *WriteService) Create(userRequest dto.UserCreateDTO) (user *data_model.User, err error) {
 
-	userModel := domain.Create(
-		user.FirstName,
-		user.LastName,
-		user.Email,
-		user.Password,
-		user.Role,
+	userModel, err := domain.Create(
+		userRequest.FirstName,
+		userRequest.LastName,
+		userRequest.Email,
+		userRequest.Password,
+		userRequest.Role,
 	)
 
-	us.userRepository.Add(&userModel)
+	return us.userRepository.Add(&userModel)
 
 }

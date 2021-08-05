@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	grpc_user "sword-health/api/grpc/user"
@@ -38,13 +37,12 @@ func (a *AuthController) Login(c *gin.Context) {
 	user, err := a.UserClient.Login(request.Email, request.Password)
 
 	if err != nil {
-		_, ok := status.FromError(err)
+		status, ok := status.FromError(err)
 		if !ok {
 			c.JSON(http.StatusBadGateway, gin.H{"error": http.StatusText(http.StatusBadGateway)})
 			return
 		}
-		fmt.Println(err)
-		//c.JSON(int(status.Code()), gin.H{"error": status.Message()})
+		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
 		return
 	}
 

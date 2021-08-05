@@ -1,8 +1,8 @@
 package services
 
 import (
-	"sword-health/users/application/repositories"
-	"sword-health/users/domain"
+	"sword-health/user/application/repositories"
+	"sword-health/user/domain"
 )
 
 type ReadService struct {

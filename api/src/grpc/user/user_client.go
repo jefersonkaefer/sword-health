@@ -64,3 +64,30 @@ func (c *UserClient) Login(email string, password string) (user *User, err error
 	}
 	return user, err
 }
+
+func (c *UserClient) CreateUser(
+	email string,
+	password string,
+	rePassword string,
+	firstName string,
+	lastName string,
+	role string,
+) (user *User, err error) {
+
+	user, err = c.instance.
+		CreateUser(
+			context.Background(),
+			&CreateUserRequest{
+				Email:      email,
+				Password:   password,
+				RePassword: rePassword,
+				FirstName:  firstName,
+				LastName:   lastName,
+				Role:       role,
+			},
+		)
+
+	fmt.Println("error: ", err)
+
+	return user, err
+}

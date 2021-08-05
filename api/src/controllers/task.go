@@ -1,7 +1,6 @@
 package controllers
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 	grpc_task "sword-health/api/grpc/task"
@@ -47,17 +46,6 @@ func (t *TaskController) Create(c *gin.Context) {
 		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
 		return
 	}
-	// message := struct {
-	// 	OwnerId int    `json:"owner_id"`
-	// 	Summary string `json:"summary"`
-	// }{
-	// 	OwnerId: int(user.Id),
-	// 	Summary: request.Summary,
-	// }
-
-	// if message, err := json.Marshal(message); err == nil {
-	// 	t.AMQ.Dispatch(amqp.ExchangeTask, amqp.RouteKeyTaskCreate, message)
-	// }
 
 	c.JSON(http.StatusCreated, task)
 }
@@ -88,23 +76,35 @@ func (t *TaskController) Update(c *gin.Context) {
 		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
 		return
 	}
-	// message := struct {
-	// 	OwnerId int    `json:"owner_id"`
-	// 	Summary string `json:"summary"`
-	// }{
-	// 	OwnerId: int(user.Id),
-	// 	Summary: request.Summary,
-	// }
-
-	// if message, err := json.Marshal(message); err == nil {
-	// 	t.AMQ.Dispatch(amqp.ExchangeTask, amqp.RouteKeyTaskCreate, message)
-	// }
 
 	c.JSON(http.StatusCreated, task)
 }
 
 func (t *TaskController) Delete(c *gin.Context) {
-	// id := c.Param("id")
+	userLogged, _ := c.Get("userLogged")
+	user := userLogged.(*middleware.UserLogged)
+
+	taskId := c.Param("id")
+	id, _ := strconv.Atoi(taskId)
+
+	var request TaskUpdateRequest
+
+	if errors := t.Validator.Validate(c, &request); errors != nil {
+		return
+	}
+
+	task, err := t.TaskClient.DeleteTaskRequest(
+		id,
+		int(user.Id),
+	)
+
+	if err != nil {
+		status, _ := status.FromError(err)
+		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, task)
 }
 
 func (t *TaskController) List(c *gin.Context) {
@@ -128,7 +128,6 @@ func (t *TaskController) List(c *gin.Context) {
 	if err != nil {
 		status, _ := status.FromError(err)
 		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
-		fmt.Println(err)
 		return
 	}
 

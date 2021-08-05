@@ -1,10 +1,10 @@
 package application
 
 import (
-	"sword-health/users/application/command"
-	"sword-health/users/application/repositories"
-	"sword-health/users/application/services"
-	"sword-health/users/infra/amqp"
+	"sword-health/user/application/command"
+	"sword-health/user/application/repositories"
+	"sword-health/user/application/services"
+	"sword-health/user/infra/amqp"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"

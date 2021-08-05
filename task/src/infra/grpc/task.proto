@@ -18,15 +18,15 @@ message TaskRequest {
     int32 id = 1;
     string summary = 2;
     int32 ownerTaskId = 3;
-    int32 userLoggerId = 4;
-    string userLoggerRole = 5;
+    int32 userLoggedId = 4;
+    string userLoggedRole = 5;
     string status = 6;
     string when = 7;
 }
 
 message TasksListRequest {
-    int32 userLoggerId = 1;
-    string userLoggerRole = 2;
+    int32 userLoggedId = 1;
+    string userLoggedRole = 2;
     int32 ownerTaskId = 3;
     int32 limit = 4;
 }
@@ -40,4 +40,5 @@ service TaskService {
     rpc ListTasksRequest(TasksListRequest) returns (TaskList) {}
     rpc FindOneTaskRequest(TaskRequest) returns (Task) {}
     rpc UpdateTaskRequest(TaskRequest) returns (Task) {}
+    rpc DeleteTaskRequest(TaskRequest) returns (Task) {}
 }

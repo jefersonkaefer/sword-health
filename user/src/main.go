@@ -2,10 +2,10 @@ package main
 
 import (
 	"log"
-	"sword-health/users/application"
-	"sword-health/users/application/data_model"
-	"sword-health/users/infra/amqp"
-	grpc_user "sword-health/users/infra/grpc"
+	"sword-health/user/application"
+	"sword-health/user/application/data_model"
+	"sword-health/user/infra/amqp"
+	grpc_user "sword-health/user/infra/grpc"
 
 	"github.com/go-redis/redis"
 	"gorm.io/driver/mysql"
@@ -34,11 +34,9 @@ func main() {
 		log.Fatalln("Error: ", err)
 	}
 
-	container = (application.Container{}).New(redisCli, db, amqp, grpc)
-
-	container.Run(db)
+	container := (application.Container{}).New(redisCli, db, amqp)
 
 	go amqp.Consume("user", container.GetHandler(), "user")
 
-	grpc.Start(container.GetHandler().Read(), 5000)
+	grpc.Start(container.GetHandler(), 5000)
 }

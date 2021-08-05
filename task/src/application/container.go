@@ -54,10 +54,18 @@ func (c *Container) init() *Container {
 		New(c.redis, c.db, c.grpc.User)
 
 	c.service.tasksWriter = (services.WriteService{}).
-		New(c.repository.tasks)
+		New(
+			c.repository.tasks,
+			c.redis,
+			c.grpc.User,
+		)
 
 	c.service.tasksRead = (services.ReadService{}).
-		New(c.repository.tasks)
+		New(
+			c.repository.tasks,
+			c.redis,
+			c.grpc.User,
+		)
 
 	c.cmd = (command.TaskHandler{}).
 		New(

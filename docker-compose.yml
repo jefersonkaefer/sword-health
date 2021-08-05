@@ -24,7 +24,53 @@ services:
     image: redis
     container_name: fs_redis
     hostname: redis
-    
+  
+  api-manager:
+    hostname: api
+    container_name: sw_task_api
+    build:
+      context: .
+    image: sword-health/go
+    env_file:
+      .env
+    networks: 
+      - backend
+    volumes: 
+      - "../api/src:/go/src"
+    ports: 
+      - "8000:8000"
+    command:
+      - air
+
+  notification:
+    hostname: notification
+    container_name: sw_task_notification
+    build:
+      context: .
+    image: sword-health/go
+    env_file:
+      .env
+    networks: 
+      - backend
+    volumes: 
+      - "../notification/src:/go/src"
+    command:
+      - air
+  
+  user:
+    hostname: user
+    container_name: sw_task_user
+    build:
+      context: .
+    image: sword-health/go
+    env_file:
+      .env
+    networks: 
+      - backend
+    volumes: 
+      - "../user/src:/go/src"
+    command:
+      - air
 networks:
   default:
     external: true

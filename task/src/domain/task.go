@@ -81,6 +81,7 @@ func (t *TaskModel) GetDataModel() *data_model.Task {
 	}
 	return &data
 }
+
 func (TaskModel) Load(task *data_model.Task) *TaskModel {
 	model := TaskModel{
 		id:             task.ID,
@@ -99,7 +100,43 @@ func (TaskModel) Load(task *data_model.Task) *TaskModel {
 	return &model
 }
 
-func (t *TaskModel) Update(summary string, status string, userLoggedId int) (err error) {
+func (t *TaskModel) Update(userId int, isManager bool, summary string, status string) (err error) {
+
+	if !t.IsOwner(userId) && !isManager {
+		return errors.New("You cannot update this task.")
+	}
+
+	err = t.updateSummary(summary)
+
+	if err != nil {
+		return err
+	}
+
+	err = t.updateStatus(status)
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (t *TaskModel) Close(userId int, isManager bool) error {
+
+	if !t.IsOwner(userId) && !isManager {
+		return errors.New("You cannot close this task.")
+	}
+
+	t.status = close
+
+	now := time.Now()
+
+	t.when = &now
+
+	return nil
+}
+
+func (t *TaskModel) updateSummary(summary string) error {
 
 	if t.summary != summary && summary != "" {
 		newValue, err := (Summary{}).New(summary)
@@ -109,6 +146,10 @@ func (t *TaskModel) Update(summary string, status string, userLoggedId int) (err
 
 		t.summary = newValue.value
 	}
+	return nil
+}
+
+func (t *TaskModel) updateStatus(status string) error {
 
 	switch status {
 	case open:
@@ -120,13 +161,17 @@ func (t *TaskModel) Update(summary string, status string, userLoggedId int) (err
 	default:
 		return errors.New("Status invalid.")
 	}
+
 	return nil
 }
 
-func (t *TaskModel) Close() {
-	t.status = close
+func (t *TaskModel) Delete(userId int, isManager bool) error {
+	if !t.IsOwner(userId) && !isManager {
+		return errors.New("You cannot delete this task.")
+	}
+	return nil
+}
 
-	now := time.Now()
-
-	t.when = &now
+func (t *TaskModel) IsOwner(userId int) bool {
+	return userId == t.ownerId
 }

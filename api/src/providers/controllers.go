@@ -6,9 +6,10 @@ import (
 )
 
 type controller struct {
-	Auth controllers.AuthController
-	User controllers.UserController
-	Task controllers.TaskController
+	Auth         controllers.AuthController
+	User         controllers.UserController
+	Task         controllers.TaskController
+	Notification controllers.NotificationController
 }
 
 func (c *Container) initControllerProviders() {
@@ -23,12 +24,14 @@ func (c *Container) initControllerProviders() {
 		User: controllers.UserController{
 			Validator:  &validator,
 			UserClient: c.Grpc.User,
-			AMQ:        c.AMQP,
 		},
 		Task: controllers.TaskController{
 			Validator:  &validator,
 			TaskClient: c.Grpc.Task,
-			AMQ:        c.AMQP,
+		},
+		Notification: controllers.NotificationController{
+			Validator:          &validator,
+			NotificationClient: c.Grpc.Notification,
 		},
 	}
 }

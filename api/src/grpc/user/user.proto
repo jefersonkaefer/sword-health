@@ -11,6 +11,15 @@ message User {
     string role = 5;
 }
 
+message CreateUserRequest {
+    string firstName = 2;
+    string lastName = 3;
+    string email = 4;
+    string role = 5;
+    string password = 6;
+    string rePassword = 7;
+}
+
 message CheckUserRequest {
     string email = 1;
     string password = 2;
@@ -18,5 +27,6 @@ message CheckUserRequest {
 
 service UserService {
     rpc CheckUser(CheckUserRequest) returns (User) {}
+    rpc CreateUser(CreateUserRequest) returns (User) {}
     rpc Get(User) returns (User) {}
 }

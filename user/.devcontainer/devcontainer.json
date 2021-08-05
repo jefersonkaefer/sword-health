@@ -1,8 +1,8 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.158.0/containers/docker-existing-docker-compose
-// If you want to run as a non-root users in the container, see .devcontainer/docker-compose.yml.
+// If you want to run as a non-root user in the container, see .devcontainer/docker-compose.yml.
 {
-	"name": "users",
+	"name": "user",
 	// Update the 'dockerComposeFile' list if you have more compose files or use different names.
 	// The .devcontainer/docker-compose.yml file contains any overrides you need/want to make.
 	"dockerComposeFile": [
@@ -10,7 +10,7 @@
 	],
 	// The 'service' property is the name of the service for the container that VS Code should
 	// use. Update this value and .devcontainer/docker-compose.yml to the real service name.
-	"service": "users",
+	"service": "user",
 	// The optional 'workspaceFolder' property is the path VS Code should open by default when
 	// connected. This is typically a file mount in .devcontainer/docker-compose.yml
 	"workspaceFolder": "/go/src",
@@ -39,7 +39,7 @@
 	// "shutdownAction": "none",
 	// Uncomment the next line to run commands after the container is created - for example installing curl.
 	//"postCreateCommand": "",
-	// "postStartCommand": "cd /go/src/users && bee run"
-	// Uncomment to connect as a non-root users if you've added one. See https://aka.ms/vscode-remote/containers/non-root.
-	//"remoteUsers": "vscode"
+	// "postStartCommand": "cd /go/src/user && bee run"
+	// Uncomment to connect as a non-root user if you've added one. See https://aka.ms/vscode-remote/containers/non-root.
+	//"remoteUser": "vscode"
 }

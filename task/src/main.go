@@ -52,7 +52,7 @@ func grpcConnection() *application.GrpcClient {
 		User: &grpc_user.UserClient{},
 	}
 
-	grpc.User.CreateConnection("users", 5000)
+	grpc.User.CreateConnection("user", 5000)
 	grpc.User.Start()
 
 	return &grpc

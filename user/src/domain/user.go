@@ -1,8 +1,8 @@
 package domain
 
 import (
-	"log"
-	"sword-health/users/application/data_model"
+	"errors"
+	"sword-health/user/application/data_model"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -24,10 +24,11 @@ func Create(
 	email string,
 	password string,
 	role string,
-) UserModel {
+) (UserModel, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 8)
+
 	if err != nil {
-		log.Panic("Error ", err.Error())
+		return UserModel{}, errors.New("Error")
 	}
 
 	u := UserModel{
@@ -39,7 +40,7 @@ func Create(
 	}
 
 	u.isDeleted = false
-	return u
+	return u, err
 }
 
 func (u *UserModel) GetId() uint {

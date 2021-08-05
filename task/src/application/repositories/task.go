@@ -6,15 +6,15 @@ import (
 	"sword-health/task/application/data_model"
 	"sword-health/task/domain"
 	grpc_user "sword-health/task/infra/grpc/client/user"
+	"time"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
 )
 
 type TaskRepository struct {
-	redis      *redis.Client
-	db         *gorm.DB
-	userClient *grpc_user.UserClient
+	redis *redis.Client
+	db    *gorm.DB
 }
 
 func (TaskRepository) New(
@@ -23,9 +23,8 @@ func (TaskRepository) New(
 	userClient *grpc_user.UserClient,
 ) *TaskRepository {
 	return &TaskRepository{
-		redis:      redis,
-		db:         db,
-		userClient: userClient,
+		redis: redis,
+		db:    db,
 	}
 }
 
@@ -34,56 +33,36 @@ func (r *TaskRepository) Save(model *domain.TaskModel) (task *data_model.Task, e
 
 	r.db.Save(dataModel)
 
-	user, err := r.userClient.Get(dataModel.OwnerId)
-
-	if err == nil {
-		dataModel.OwnerFirstName = user.GetFirstName()
-		dataModel.OwnerLastName = user.GetLastName()
-		dataModel.OwnerEmail = user.GetEmail()
-	}
-
-	key := fmt.Sprintf("task.%d.user.%d", dataModel.ID, dataModel.OwnerId)
-
-	dataJson, err := json.Marshal(dataModel)
-
-	if err == nil {
-		r.redis.Set(key, dataJson, 0)
-	}
-
 	return dataModel, err
 }
 
-func (r *TaskRepository) FindOne(condictions *data_model.Task) (task *domain.TaskModel, err error) {
+func (r *TaskRepository) FindOne(id int) (task *domain.TaskModel, err error) {
 
 	var dataModel data_model.Task
+	ttl, _ := time.ParseDuration("300s")
+	task = &domain.TaskModel{}
 
-	key := fmt.Sprintf("task.%d.user.%d", condictions.ID, condictions.OwnerId)
-
+	key := fmt.Sprintf("task.%d", id)
 	data, err := r.redis.Get(key).Bytes()
 
 	if len(data) == 0 {
-		err = r.db.Where(condictions).
+		err = r.db.Where(&data_model.Task{ID: uint(id)}).
 			Take(&dataModel).Error
 
-		user, err := r.userClient.Get(dataModel.OwnerId)
+		if err != nil {
+			return task, err
+		}
 
 		if err != nil {
 			return task, gorm.ErrInvalidData
 		}
-		if err == nil {
-			dataModel.OwnerFirstName = user.GetFirstName()
-			dataModel.OwnerLastName = user.GetLastName()
-			dataModel.OwnerEmail = user.GetEmail()
-		}
-		if err != nil {
-			return task, gorm.ErrRecordNotFound
-		}
 
 		data, err = json.Marshal(&dataModel)
 
-		if err == nil {
-			r.redis.Set(key, data, 0)
+		if err != nil {
+			return task, gorm.ErrInvalidData
 		}
+		r.redis.Set(key, data, ttl)
 	}
 
 	err = json.Unmarshal(data, &dataModel)
@@ -96,16 +75,33 @@ func (r *TaskRepository) FindOne(condictions *data_model.Task) (task *domain.Tas
 
 }
 
-func (r *TaskRepository) ListTasks(condictions *data_model.Task, limit int) (tasks []*data_model.Task) {
+func (r *TaskRepository) ListTasks(ownerId int, limit int) (tasks []*domain.TaskModel, err error) {
 
-	r.db.Where(condictions).
-		Find(&tasks).
-		Limit(limit)
+	dataModels := []*data_model.Task{}
 
-	for _, data := range tasks {
-		model := (domain.TaskModel{}).Load(data)
-		tasks = append(tasks, model.GetDataModel())
+	if err != nil {
+		return tasks, err
 	}
 
-	return tasks
+	condictions := data_model.Task{
+		OwnerId: ownerId,
+	}
+
+	r.db.Where(condictions).
+		Find(&dataModels).
+		Limit(limit)
+
+	for _, data := range dataModels {
+		model := (domain.TaskModel{}).Load(data)
+		tasks = append(tasks, model)
+	}
+
+	return tasks, err
+}
+
+func (r *TaskRepository) Delete(model *domain.TaskModel) (err error) {
+
+	dataModel := model.GetDataModel()
+
+	return r.db.Delete(dataModel).Error
 }

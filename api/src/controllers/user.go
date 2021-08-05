@@ -1,20 +1,18 @@
 package controllers
 
 import (
-	"encoding/json"
 	"net/http"
 	grpc_user "sword-health/api/grpc/user"
-	"sword-health/api/infra/amqp"
 
 	"sword-health/api/validators"
 
 	"github.com/gin-gonic/gin"
+	status "google.golang.org/grpc/status"
 )
 
 type UserController struct {
 	Validator  *validators.JSONValidator
 	UserClient *grpc_user.UserClient
-	AMQ        *amqp.Connection
 }
 
 type CreateRequest struct {
@@ -34,24 +32,24 @@ func (u *UserController) Create(c *gin.Context) {
 		return
 	}
 
-	if message, err := json.Marshal(request); err == nil {
-		u.AMQ.Dispatch(amqp.ExchangeUser, amqp.RouteKeyUserCreate, message)
-	}
+	user, err := u.UserClient.CreateUser(
+		request.Email,
+		request.Password,
+		request.Repassword,
+		request.FirstName,
+		request.LastName,
+		request.Role,
+	)
 
-	c.JSON(http.StatusAccepted, http.StatusText(http.StatusAccepted))
-}
-
-func (u *UserController) Update(c *gin.Context) {
-
-	var request CreateRequest
-
-	if errors := u.Validator.Validate(c, &request); errors != nil {
+	if err != nil {
+		status, ok := status.FromError(err)
+		if !ok {
+			c.JSON(http.StatusBadGateway, gin.H{"error": http.StatusText(http.StatusBadGateway)})
+			return
+		}
+		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"error": "eerr"})
-}
-
-func (u *UserController) Delete(c *gin.Context) {
-	// id := c.Param("id")
+	c.JSON(http.StatusOK, gin.H{"id": user.GetId()})
 }

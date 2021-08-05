@@ -7,8 +7,8 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"sword-health/users/application/dto"
-	"sword-health/users/application/services"
+	"sword-health/user/application/command"
+	"sword-health/user/application/dto"
 	"time"
 
 	grpc "google.golang.org/grpc"
@@ -19,13 +19,12 @@ import (
 
 type Server struct {
 	UnimplementedUserServiceServer
-	readService  *services.ReadService
-	writeService *services.WriteService
+	command *command.UserHandler
 }
 
-func (s *Server) Start(readService *services.ReadService, port int) {
+func (s *Server) Start(command *command.UserHandler, port int) {
 
-	s.readService = readService
+	s.command = command
 
 	var kaep = keepalive.EnforcementPolicy{
 		MinTime:             5 * time.Second, // If a client pings more than once every 5 seconds, terminate the connection
@@ -58,7 +57,7 @@ func (s *Server) Start(readService *services.ReadService, port int) {
 
 func (s *Server) CheckUser(ctx context.Context, in *CheckUserRequest) (user *User, err error) {
 
-	userModel := s.readService.FindByEmail(in.Email)
+	userModel := s.command.Read().FindByEmail(in.Email)
 
 	if !userModel.CheckEmail(in.Email) || !userModel.CheckPassword(in.Password) {
 		return user, status.Error(http.StatusBadRequest, "Invalid email or password.")
@@ -78,7 +77,7 @@ func (s *Server) CheckUser(ctx context.Context, in *CheckUserRequest) (user *Use
 
 func (s *Server) Get(ctx context.Context, in *User) (user *User, err error) {
 
-	userModel, err := s.readService.FindOne(int(in.GetId()))
+	userModel, err := s.command.Read().FindOne(int(in.GetId()))
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -99,7 +98,7 @@ func (s *Server) Get(ctx context.Context, in *User) (user *User, err error) {
 
 }
 
-func (s *Server) Create(ctx context.Context, in *CreateUserRequest) (user *User, err error) {
+func (s *Server) CreateUser(ctx context.Context, in *CreateUserRequest) (*User, error) {
 
 	userDTO := dto.CreateUser(
 		in.GetFirstName(),
@@ -110,5 +109,13 @@ func (s *Server) Create(ctx context.Context, in *CreateUserRequest) (user *User,
 		in.GetRePassword(),
 	)
 
-	s.writeService.Create(userDTO)
+	user, err := s.command.Write().Create(userDTO)
+
+	if err != nil {
+		return &User{}, status.Error(http.StatusBadRequest, err.Error())
+	}
+
+	return &User{
+		Id: int32(user.ID),
+	}, err
 }
