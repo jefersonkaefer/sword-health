@@ -1,7 +1,6 @@
 package message
 
 import (
-	"fmt"
 	"log"
 	"sword-health/notification/application/command"
 
@@ -92,7 +91,6 @@ func (b *AMQP) Consume(cmd command.Handler, consumerName string, queueName strin
 
 	go func() {
 		for d := range msgs {
-			fmt.Println("AQQUI ", d.Body)
 			cmd.Exec(d.RoutingKey, d.Body)
 		}
 	}()

@@ -34,7 +34,7 @@ func (ReadService) New(
 func (us *ReadService) FindOne(userLoggedId int, id int) (task *data_model.Task, err error) {
 
 	user, err := us.userClient.Get(userLoggedId)
-	fmt.Println("  ss ee ee ", userLoggedId, id)
+	
 	key := fmt.Sprintf("task.%d", id)
 
 	data, err := us.redis.Get(key).Bytes()

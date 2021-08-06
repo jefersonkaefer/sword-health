@@ -58,7 +58,6 @@ func (us *ReadService) FindOne(userLoggedId int, id int) (notification *data_mod
 		data, err = json.Marshal(&notification)
 
 		if err != nil {
-			fmt.Println("EEE RR 1 ", err)
 			return notification, gorm.ErrInvalidData
 		}
 
@@ -68,7 +67,6 @@ func (us *ReadService) FindOne(userLoggedId int, id int) (notification *data_mod
 	err = json.Unmarshal(data, &notification)
 
 	if err != nil {
-		fmt.Println("EEE RR 2 ", err)
 		return notification, err
 	}
 

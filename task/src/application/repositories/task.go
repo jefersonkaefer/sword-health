@@ -47,7 +47,6 @@ func (r *TaskRepository) FindOne(id int) (task *domain.TaskModel, err error) {
 	if err != nil {
 		return task, err
 	}
-	fmt.Println(" DATA ", id)
 	return (domain.TaskModel{}).Load(&dataModel), err
 
 }
