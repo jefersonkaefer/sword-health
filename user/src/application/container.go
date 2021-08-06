@@ -4,7 +4,6 @@ import (
 	"sword-health/user/application/command"
 	"sword-health/user/application/repositories"
 	"sword-health/user/application/services"
-	"sword-health/user/infra/amqp"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -16,7 +15,6 @@ type Container struct {
 	cmd        *command.UserHandler
 	repository Repository
 	service    Service
-	msgBroker  *amqp.Connection
 }
 
 type Service struct {
@@ -31,12 +29,10 @@ type Repository struct {
 func (Container) New(
 	redis *redis.Client,
 	db *gorm.DB,
-	msgBroker *amqp.Connection,
 ) *Container {
 	c := &Container{
 		redis:     redis,
 		db:        db,
-		msgBroker: msgBroker,
 	}
 	return c.init()
 }

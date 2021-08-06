@@ -1,10 +1,11 @@
 package grpc_notification
 
 import (
+	context "context"
 	"fmt"
 	"log"
 	"net"
-	"sword-health/task/application/command"
+	"sword-health/notification/application/command"
 	"time"
 
 	grpc "google.golang.org/grpc"
@@ -13,10 +14,10 @@ import (
 
 type Server struct {
 	UnimplementedNotificationServiceServer
-	cmdService *command.NotificationHandler
+	cmdService command.Handler
 }
 
-func (s *Server) Start(cmdService *command.NotificationHandler, port int) {
+func (s *Server) Start(cmdService command.Handler, port string) {
 
 	s.cmdService = cmdService
 
@@ -47,4 +48,59 @@ func (s *Server) Start(cmdService *command.NotificationHandler, port int) {
 	if err := gs.Serve(lis); err != nil {
 		log.Fatalf("failed to serve: %v", err)
 	}
+}
+
+func (s *Server) Get(ctx context.Context, in *NotificationRequest) (notification *Notification, err error) {
+	
+	notificationResponse := &Notification{}
+
+	dataModel, err := s.cmdService.Read().FindOne(
+		int(in.GetUserLoggedId()),
+		int(in.GetId()),
+	)
+
+	if err != nil{
+		return notificationResponse, err
+	}
+	
+	go s.cmdService.Write().MarkAsRead(
+		int(in.GetUserLoggedId()),
+		int(dataModel.ID),
+	)
+
+	notificationResponse = &Notification{
+		Id:               int32(dataModel.ID),
+		NotificationType: dataModel.NotificationType,
+		Content:          dataModel.Content,
+		FromFullName:     dataModel.FromFullName,
+		When:             dataModel.GetWhen(),
+	}
+
+	return notificationResponse, err
+}
+
+func (s *Server) List(ctx context.Context, in *NotificationRequest) (list *ListNotification, err error) {
+	list = &ListNotification{}
+
+	notifications, err := s.cmdService.Read().ListNotifications(
+		int(in.GetUserLoggedId()),
+		int(in.GetFromId()),
+		int(in.GetLimit()),
+	)
+	if err != nil {
+		return list, err
+	}
+
+	for _, notification := range notifications {
+		list.Notifications = append(list.Notifications, &Notification{
+			Id:               int32(notification.ID),
+			NotificationType: notification.NotificationType,
+			Content:          notification.Content,
+			FromFullName:     notification.FromFullName,
+			Status:           notification.Status,
+			When:             notification.GetWhen(),
+		})
+	}
+
+	return list, err
 }

@@ -100,7 +100,7 @@ func (TaskModel) Load(task *data_model.Task) *TaskModel {
 	return &model
 }
 
-func (t *TaskModel) Update(userId int, isManager bool, summary string, status string) (err error) {
+func (t *TaskModel) Update(userId int, isManager bool, summary string) (err error) {
 
 	if !t.IsOwner(userId) && !isManager {
 		return errors.New("You cannot update this task.")
@@ -111,8 +111,6 @@ func (t *TaskModel) Update(userId int, isManager bool, summary string, status st
 	if err != nil {
 		return err
 	}
-
-	err = t.updateStatus(status)
 
 	if err != nil {
 		return err
@@ -165,8 +163,8 @@ func (t *TaskModel) updateStatus(status string) error {
 	return nil
 }
 
-func (t *TaskModel) Delete(userId int, isManager bool) error {
-	if !t.IsOwner(userId) && !isManager {
+func (t *TaskModel) Delete(isManager bool) error {
+	if !isManager {
 		return errors.New("You cannot delete this task.")
 	}
 	return nil

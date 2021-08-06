@@ -5,12 +5,30 @@ option go_package = "/grpc_user";
 
 message User {
     int32 id = 1;
-    string firstName = 2;
-    string lastName = 3;
+    string firstName = 2 [json_name="first_name"];
+    string lastName = 3 [json_name="last_name"];
+    string fullName = 4 [json_name="full_name"];
+    string email = 5;
+    string role = 6;
+    bool isManager = 7 [json_name="is_manager"];
+}
+
+message CreateUserRequest {
+    string firstName = 1 [json_name="first_name"];
+    string lastName = 2 [json_name="last_name"];
     string email = 4;
     string role = 5;
+    string password = 6;
+    string rePassword = 7;
+}
+
+message CheckUserRequest {
+    string email = 1;
+    string password = 2;
 }
 
 service UserService {
+    rpc CheckUser(CheckUserRequest) returns (User) {}
+    rpc CreateUser(CreateUserRequest) returns (User) {}
     rpc Get(User) returns (User) {}
 }

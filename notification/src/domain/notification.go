@@ -2,7 +2,7 @@ package domain
 
 import (
 	"errors"
-	"sword-health/task/application/data_model"
+	"sword-health/notification/application/data_model"
 	"time"
 )
 
@@ -26,18 +26,23 @@ func Create(
 	content string,
 	fromId int,
 ) (NotificationModel, error) {
-
+	now := time.Now()
 	return NotificationModel{
 		notificationType: notificationType,
 		content:          content,
 		fromId:           fromId,
 		status:           unread,
+		when:             &now,
 	}, nil
 
 }
 
 func (n *NotificationModel) GetId() uint {
 	return n.id
+}
+
+func (n *NotificationModel) GetFromId() int {
+	return n.fromId
 }
 
 func (n *NotificationModel) GetStatus() string {
@@ -77,10 +82,10 @@ func (NotificationModel) Load(notification *data_model.Notification) *Notificati
 	return &model
 }
 
-func (n *NotificationModel) MarkASread(isManager bool) (err error) {
+func (n *NotificationModel) MarkAsRead(IsManager bool) (err error) {
 
-	if !isManager {
-		return errors.New("You cannot access this resource.")
+	if !IsManager {
+		return errors.New("You cannot access this notification.")
 	}
 
 	n.status = read

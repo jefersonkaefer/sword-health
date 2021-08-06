@@ -6,7 +6,6 @@ import (
 
 	grpc_task "sword-health/api/grpc/task"
 	middleware "sword-health/api/http"
-	"sword-health/api/infra/amqp"
 	"sword-health/api/providers"
 
 	"github.com/gin-gonic/gin"
@@ -17,12 +16,10 @@ var container providers.Container
 func init() {
 
 	container = providers.Container{}
-	initAmqpConnection(&container)
 	initGrpcConnection(&container)
 }
 
 func main() {
-	defer container.Clear()
 
 	router := gin.Default()
 	router.
@@ -37,21 +34,24 @@ func main() {
 		POST("/task", func(c *gin.Context) {
 			container.Controller.Task.Create(c)
 		}).
-		PATCH("/task/:id", func(c *gin.Context) {
-			container.Controller.Task.Update(c)
+		PATCH("/task/:id/close", func(c *gin.Context) {
+			container.Controller.Task.Close(c)
 		})
 
-	tasks := router.
+	task := router.
 		Group("/task").
-		Use(middleware.VerifyToken()).
-		Use(middleware.IsManager())
+		Use(middleware.VerifyToken())
 	{
-		tasks.
+		task.
 			GET("", func(c *gin.Context) {
 				container.Controller.Task.List(c)
 			}).
 			GET("/:id", func(c *gin.Context) {
 				container.Controller.Task.Get(c)
+			}).
+			Use(middleware.IsManager()).
+			DELETE("/:id", func(c *gin.Context) {
+				container.Controller.Task.Delete(c)
 			})
 	}
 	notification := router.
@@ -60,6 +60,8 @@ func main() {
 		Use(middleware.IsManager())
 	{
 		notification.
+			Use(middleware.VerifyToken()).
+			Use(middleware.IsManager()).
 			GET("", func(c *gin.Context) {
 				container.Controller.Notification.List(c)
 			}).
@@ -86,20 +88,4 @@ func initGrpcConnection(c *providers.Container) {
 	c.Grpc.Notification = &grpc_notification.NotificationClient{}
 	c.Grpc.Notification.CreateConnection("notification", 5000)
 	c.Grpc.Notification.Start()
-}
-
-func initAmqpConnection(c *providers.Container) {
-	c.AMQP = amqp.NewConnection("guest", "guest", "rabbitmq", 5672).
-		DeclareExchange(amqp.ExchangeUser).
-		DeclareExchange(amqp.ExchangeTask).
-		QueueDeclare(
-			amqp.ExchangeUser,
-			amqp.QueueUser,
-			amqp.RouteKeyUserCreate,
-		).
-		QueueDeclare(
-			amqp.ExchangeTask,
-			amqp.QueueTask,
-			amqp.RouteKeyTaskCreate,
-		)
 }

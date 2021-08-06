@@ -52,15 +52,14 @@ func (c *TaskClient) Start() TaskServiceClient {
 	return c.instance
 }
 
-func (t *TaskClient) ListTasksRequest(userId int32, role string, ownerId int32, limit int32) (*TaskList, error) {
+func (t *TaskClient) ListTasksRequest(userId int32, ownerId int32, limit int32) (*TaskList, error) {
 
 	list, err := t.instance.ListTasksRequest(
 		context.Background(),
 		&TasksListRequest{
-			UserLoggedId:   userId,
-			UserLoggedRole: role,
-			OwnerTaskId:    ownerId,
-			Limit:          limit,
+			UserLoggedId: userId,
+			OwnerTaskId:  ownerId,
+			Limit:        limit,
 		},
 	)
 
@@ -72,7 +71,7 @@ func (t *TaskClient) ListTasksRequest(userId int32, role string, ownerId int32, 
 }
 
 func (t *TaskClient) FindTaskRequest(
-	taskId int32,
+	id int32,
 	userId int32,
 	role string,
 ) (*Task, error) {
@@ -80,7 +79,7 @@ func (t *TaskClient) FindTaskRequest(
 	task, err := t.instance.FindOneTaskRequest(
 		context.Background(),
 		&TaskRequest{
-			Id:             taskId,
+			Id:             id,
 			UserLoggedId:   userId,
 			UserLoggedRole: role,
 		},
@@ -110,12 +109,12 @@ func (t *TaskClient) CreateTaskRequest(summary string, ownerId int) (*Task, erro
 	return task, err
 }
 
-func (t *TaskClient) UpdateTaskRequest(taskId int, summary string, status string, userLoggedId int) (*Task, error) {
+func (t *TaskClient) UpdateTaskRequest(id int, summary string, status string, userLoggedId int) (*Task, error) {
 
 	task, err := t.instance.UpdateTaskRequest(
 		context.Background(),
 		&TaskRequest{
-			Id:           int32(taskId),
+			Id:           int32(id),
 			Summary:      summary,
 			Status:       status,
 			UserLoggedId: int32(userLoggedId),
@@ -129,13 +128,30 @@ func (t *TaskClient) UpdateTaskRequest(taskId int, summary string, status string
 	return task, err
 }
 
-func (t *TaskClient) DeleteTaskRequest(taskId int, userLoggedId int) (*Task, error) {
+func (t *TaskClient) DeleteTaskRequest(userLoggedId int, id int) (*Task, error) {
 
 	task, err := t.instance.DeleteTaskRequest(
 		context.Background(),
 		&TaskRequest{
-			Id:           int32(taskId),
 			UserLoggedId: int32(userLoggedId),
+			Id:           int32(id),
+		},
+	)
+
+	if err != nil {
+		log.Println("error: ", err)
+	}
+
+	return task, err
+}
+
+func (t *TaskClient) CloseTaskRequest(userLoggedId int, id int) (*Task, error) {
+
+	task, err := t.instance.CloseTaskRequest(
+		context.Background(),
+		&TaskRequest{
+			UserLoggedId: int32(userLoggedId),
+			Id:           int32(id),
 		},
 	)
 

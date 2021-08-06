@@ -68,18 +68,21 @@ func (c *NotificationClient) Get(userLoggedId int, id int) (notification *Notifi
 	return notification, err
 }
 
-func (c *NotificationClient) List(userLoggedId int) (list *ListNotification, err error) {
+func (c *NotificationClient) List(userLoggedId int, fromId int, limit int) (list *ListNotification, err error) {
 
 	list, err = c.instance.
 		List(
 			context.Background(),
 			&NotificationRequest{
 				UserLoggedId: int32(userLoggedId),
+				FromId:       int32(fromId),
+				Limit:        int32(limit),
 			},
 		)
 
 	if err != nil {
 		fmt.Errorf("error: ", err)
 	}
+
 	return list, err
 }

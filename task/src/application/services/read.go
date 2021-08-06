@@ -3,11 +3,11 @@ package services
 import (
 	"encoding/json"
 	"fmt"
+	"sword-health/task/application/command"
 	"sword-health/task/application/data_model"
 	"sword-health/task/application/repositories"
 	"sword-health/task/domain"
 	grpc_user "sword-health/task/infra/grpc/client/user"
-	"time"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -16,14 +16,14 @@ import (
 type ReadService struct {
 	redis          *redis.Client
 	userClient     *grpc_user.UserClient
-	taskRepository *repositories.TaskRepository
+	taskRepository repositories.Repository
 }
 
 func (ReadService) New(
-	repository *repositories.TaskRepository,
+	repository repositories.Repository,
 	redis *redis.Client,
 	userClient *grpc_user.UserClient,
-) *ReadService {
+) command.Read {
 	return &ReadService{
 		taskRepository: repository,
 		redis:          redis,
@@ -31,19 +31,17 @@ func (ReadService) New(
 	}
 }
 
-func (us *ReadService) FindOne(userLoggedId int, taskId int) (task *data_model.Task, err error) {
+func (us *ReadService) FindOne(userLoggedId int, id int) (task *data_model.Task, err error) {
 
-	userLogged, err := us.userClient.Get(userLoggedId)
-
-	user := (domain.User{}).Load(int(userLogged.GetId()), userLogged.GetRole())
-
-	key := fmt.Sprintf("task.%d", taskId)
+	user, err := us.userClient.Get(userLoggedId)
+	fmt.Println("  ss ee ee ", userLoggedId, id)
+	key := fmt.Sprintf("task.%d", id)
 
 	data, err := us.redis.Get(key).Bytes()
 
 	if len(data) == 0 {
 		model, err := us.taskRepository.FindOne(
-			taskId,
+			id,
 		)
 
 		if err != nil {
@@ -51,7 +49,9 @@ func (us *ReadService) FindOne(userLoggedId int, taskId int) (task *data_model.T
 		}
 
 		user, err := us.userClient.Get(int(model.GetOwnerId()))
+		if !user.GetIsManager() && model.IsOwner(int(user.GetId())) {
 
+		}
 		task := model.GetDataModel()
 
 		if err != nil {
@@ -68,16 +68,15 @@ func (us *ReadService) FindOne(userLoggedId int, taskId int) (task *data_model.T
 			return task, gorm.ErrInvalidData
 		}
 
-		ttl, _ := time.ParseDuration("300s")
-
-		us.redis.Set(key, data, ttl)
+		us.redis.Set(key, data, 0)
 	}
 
 	err = json.Unmarshal(data, &task)
 
 	model := (domain.TaskModel{}).Load(task)
+	
 
-	if !model.IsOwner(user.GetId()) && !user.IsManager() {
+	if !model.IsOwner(int(user.GetId())) && !user.GetIsManager() {
 		return task, gorm.ErrRecordNotFound
 	}
 
@@ -85,16 +84,14 @@ func (us *ReadService) FindOne(userLoggedId int, taskId int) (task *data_model.T
 }
 
 func (us *ReadService) ListTasks(userLoggedId int, ownerId int, limit int) (tasks []*data_model.Task, err error) {
-	userLogged, err := us.userClient.Get(userLoggedId)
-
-	user := (domain.User{}).Load(int(userLogged.GetId()), userLogged.GetRole())
+	user, err := us.userClient.Get(userLoggedId)
 
 	if err != nil {
 		return tasks, err
 	}
 
-	if !user.IsManager() && ownerId != int(userLogged.GetId()) {
-		ownerId = int(userLogged.GetId())
+	if !user.GetIsManager() && ownerId != int(user.GetId()) {
+		ownerId = int(user.GetId())
 	}
 
 	key := fmt.Sprintf("task.list.user.%d", userLoggedId)
@@ -136,13 +133,19 @@ func (us *ReadService) ListTasks(userLoggedId int, ownerId int, limit int) (task
 			return tasks, gorm.ErrInvalidData
 		}
 
-		ttl, _ := time.ParseDuration("300s")
-
-		us.redis.Set(key, data, ttl)
+		us.redis.Set(key, data, 0)
 
 	}
 
 	err = json.Unmarshal(data, &tasks)
 
+	if limit > 0 {
+		count := len(tasks)
+
+		if limit > count {
+			limit = count
+		}
+		return tasks[0:limit], err
+	}
 	return tasks, err
 }

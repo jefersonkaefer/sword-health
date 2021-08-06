@@ -1,48 +1,24 @@
 package command
 
 import (
-	"encoding/json"
-	"log"
+	"sword-health/task/application/data_model"
 	"sword-health/task/application/dto"
-	"sword-health/task/application/services"
 )
 
-type TaskHandler struct {
-	taskWriteService *services.WriteService
-	taskReadService  *services.ReadService
+type Handler interface {
+	Exec(cmd string, body []byte)
+	Read() Read
+	Write() Write
 }
 
-func (TaskHandler) New(
-	taskWriteService *services.WriteService,
-	taskReadService *services.ReadService,
-) *TaskHandler {
-	return &TaskHandler{
-		taskWriteService: taskWriteService,
-		taskReadService:  taskReadService,
-	}
-
+type Read interface {
+	FindOne(userLoggedId int, taskId int) (task *data_model.Task, err error)
+	ListTasks(userLoggedId int, ownerId int, limit int) (tasks []*data_model.Task, err error)
 }
 
-func (uh *TaskHandler) Exec(cmd string, body []byte) {
-	switch cmd {
-	case "task.create":
-		taskDTO := dto.TaskCreateDTO{}
-
-		if err := json.Unmarshal(body, &taskDTO); err == nil {
-			uh.taskWriteService.Create(taskDTO)
-		}
-
-	default:
-		log.Println("no implemented.")
-	}
-}
-
-func (h *TaskHandler) Read() *services.ReadService {
-
-	return h.taskReadService
-}
-
-func (h *TaskHandler) Write() *services.WriteService {
-
-	return h.taskWriteService
+type Write interface {
+	Create(taskRequest dto.TaskCreateDTO) (task *data_model.Task, err error)
+	Update(taskRequest dto.TaskUpdateDTO) (task *data_model.Task, err error)
+	Delete(userLoggedId int, id int) (err error)
+	Close(userId int, id int) (err error)
 }

@@ -1,12 +1,10 @@
 package repositories
 
 import (
-	"encoding/json"
 	"fmt"
 	"sword-health/task/application/data_model"
 	"sword-health/task/domain"
 	grpc_user "sword-health/task/infra/grpc/client/user"
-	"time"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -21,7 +19,7 @@ func (TaskRepository) New(
 	redis *redis.Client,
 	db *gorm.DB,
 	userClient *grpc_user.UserClient,
-) *TaskRepository {
+) Repository {
 	return &TaskRepository{
 		redis: redis,
 		db:    db,
@@ -39,38 +37,17 @@ func (r *TaskRepository) Save(model *domain.TaskModel) (task *data_model.Task, e
 func (r *TaskRepository) FindOne(id int) (task *domain.TaskModel, err error) {
 
 	var dataModel data_model.Task
-	ttl, _ := time.ParseDuration("300s")
-	task = &domain.TaskModel{}
 
-	key := fmt.Sprintf("task.%d", id)
-	data, err := r.redis.Get(key).Bytes()
-
-	if len(data) == 0 {
-		err = r.db.Where(&data_model.Task{ID: uint(id)}).
-			Take(&dataModel).Error
-
-		if err != nil {
-			return task, err
-		}
-
-		if err != nil {
-			return task, gorm.ErrInvalidData
-		}
-
-		data, err = json.Marshal(&dataModel)
-
-		if err != nil {
-			return task, gorm.ErrInvalidData
-		}
-		r.redis.Set(key, data, ttl)
-	}
-
-	err = json.Unmarshal(data, &dataModel)
+	err = r.db.Where(
+		data_model.Task{
+			ID: uint(id),
+		},
+	).Take(&dataModel).Error
 
 	if err != nil {
 		return task, err
 	}
-
+	fmt.Println(" DATA ", id)
 	return (domain.TaskModel{}).Load(&dataModel), err
 
 }
@@ -103,5 +80,11 @@ func (r *TaskRepository) Delete(model *domain.TaskModel) (err error) {
 
 	dataModel := model.GetDataModel()
 
-	return r.db.Delete(dataModel).Error
+	err = r.db.Delete(&dataModel).Error
+
+	if err != nil {
+		fmt.Println("ERROR ", err)
+	}
+
+	return err
 }

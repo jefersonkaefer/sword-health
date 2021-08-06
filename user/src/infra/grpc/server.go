@@ -22,7 +22,7 @@ type Server struct {
 	command *command.UserHandler
 }
 
-func (s *Server) Start(command *command.UserHandler, port int) {
+func (s *Server) Start(command *command.UserHandler, port string) {
 
 	s.command = command
 
@@ -90,8 +90,10 @@ func (s *Server) Get(ctx context.Context, in *User) (user *User, err error) {
 		Id:        int32(userModel.GetId()),
 		FirstName: userModel.GetFirstName(),
 		LastName:  userModel.GetLastName(),
+		FullName:  userModel.GetFullName(),
 		Email:     userModel.GetEmail(),
 		Role:      userModel.GetRole(),
+		IsManager: userModel.IsManager(),
 	}
 
 	return user, nil

@@ -1,48 +1,22 @@
 package command
 
 import (
-	"encoding/json"
-	"log"
+	"sword-health/notification/application/data_model"
 	"sword-health/notification/application/dto"
-	"sword-health/notification/application/services"
 )
 
-type NotificationHandler struct {
-	notificationWriteService *services.WriteService
-	notificationReadService  *services.ReadService
+type Handler interface {
+	Exec(cmd string, body []byte)
+	Read() Read
+	Write() Write
 }
 
-func (NotificationHandler) New(
-	notificationWriteService *services.WriteService,
-	notificationReadService *services.ReadService,
-) *NotificationHandler {
-	return &NotificationHandler{
-		notificationWriteService: notificationWriteService,
-		notificationReadService:  notificationReadService,
-	}
-
+type Read interface {
+	FindOne(userLoggedId int, id int) (notification *data_model.Notification, err error)
+	ListNotifications(userLoggedId int, fromId int, limit int) (notifications []*data_model.Notification, err error)
 }
 
-func (uh *NotificationHandler) Exec(cmd string, body []byte) {
-	switch cmd {
-	case "notification.create":
-		notificationDTO := dto.NotificationCreateDTO{}
-
-		if err := json.Unmarshal(body, &notificationDTO); err == nil {
-			uh.notificationWriteService.Create(notificationDTO)
-		}
-
-	default:
-		log.Println("no implemented.")
-	}
-}
-
-func (h *NotificationHandler) Read() *services.ReadService {
-
-	return h.notificationReadService
-}
-
-func (h *NotificationHandler) Write() *services.WriteService {
-
-	return h.notificationWriteService
+type Write interface {
+	Create(notificationDTO dto.CreateNotificationDTO) (notification *data_model.Notification, err error)
+	MarkAsRead(userLoggedId int, id int) (err error)
 }

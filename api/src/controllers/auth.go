@@ -66,8 +66,6 @@ func (a *AuthController) CreateToken(
 ) (string, error) {
 	var err error
 
-	os.Setenv("ACCESS_SECRET", "jdnfksdmfksd")
-
 	atClaims := jwt.MapClaims{}
 
 	atClaims["user_id"] = userid

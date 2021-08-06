@@ -2,6 +2,7 @@ package domain
 
 import (
 	"errors"
+	"fmt"
 	"sword-health/user/application/data_model"
 
 	"golang.org/x/crypto/bcrypt"
@@ -13,9 +14,7 @@ type UserModel struct {
 	lastName  string
 	email     string
 	password  string
-	fullName  string
 	role      string
-	isDeleted bool
 }
 
 func Create(
@@ -39,7 +38,6 @@ func Create(
 		role:      role,
 	}
 
-	u.isDeleted = false
 	return u, err
 }
 
@@ -53,6 +51,10 @@ func (u *UserModel) GetFirstName() string {
 
 func (u *UserModel) GetLastName() string {
 	return u.lastName
+}
+
+func (u *UserModel) GetFullName() string {
+	return fmt.Sprintf("%s %s", u.firstName, u.lastName)
 }
 
 func (u *UserModel) GetEmail() string {
@@ -95,4 +97,8 @@ func (u *UserModel) CheckPassword(password string) bool {
 
 func (u *UserModel) CheckEmail(email string) bool {
 	return u.email == email
+}
+
+func (u *UserModel) IsManager() bool {
+	return u.role == manager
 }

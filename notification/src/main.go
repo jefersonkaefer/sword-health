@@ -2,10 +2,13 @@ package main
 
 import (
 	"log"
+	"os"
 	"sword-health/notification/application"
-	"sword-health/notification/infra/amqp"
+	"sword-health/notification/application/data_model"
 	grpc_notification "sword-health/notification/infra/grpc"
-	"sword-health/task/application/data_model"
+	"sword-health/notification/infra/message"
+
+	grpc_user "sword-health/notification/infra/grpc/client/user"
 
 	"github.com/go-redis/redis"
 	"gorm.io/driver/mysql"
@@ -17,20 +20,24 @@ var container *application.Container
 func main() {
 
 	redisCli := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:      os.Getenv("REDIS_ADDR"),
 		Password: "",
 		DB:       0,
 	})
 
-	amqp := (amqp.Connection{}).New("guest", "guest", "rabbitmq", 5672)
+	broker := (message.AMQP{}).New(os.Getenv("BROKER_DSN"))
 
 	grpc := grpc_notification.Server{}
 
-	dsn := "root:swt4sks@tcp(mysql:3306)/sw_notifications?charset=utf8mb4&parseTime=True&loc=Local"
 
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(
+		mysql.Open(os.Getenv("DB_USERS_DSN")), 
+		&gorm.Config{},
+	)
 
-	container = (application.Container{}).New(redisCli, db, amqp)
+	grpcClients := grpcConnection()
+
+	container = (application.Container{}).New(redisCli, db, broker, grpcClients)
 
 	err = db.AutoMigrate(&data_model.Notification{})
 
@@ -38,7 +45,32 @@ func main() {
 		log.Fatalln("Error: ", err)
 	}
 
-	go amqp.Consume("notification", container.GetHandler(), "notification")
+	go broker.
+		QueueDeclare(
+			message.NotificationExchange,
+			message.NotificationQueue,
+			message.NotificationRouteKeyCreate,
+		).
+		Consume(
+			container.GetHandler(),
+			"notification",
+			"notification",
+		)
 
-	grpc.Start(container.GetHandler(), 5000)
+	grpc.Start(container.GetHandler(), os.Getenv("GRPC_SERVER_PORT"))
+}
+
+func grpcConnection() *application.GrpcClient {
+
+	grpc := application.GrpcClient{
+		User: &grpc_user.UserClient{},
+	}
+
+	grpc.User.CreateConnection(
+		os.Getenv("GRPC_USER_CLIENT_HOSTNAME"), 
+		os.Getenv("GRPC_USER_CLIENT_PORT"),
+	)
+	grpc.User.Start()
+
+	return &grpc
 }

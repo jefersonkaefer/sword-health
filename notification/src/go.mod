@@ -1,4 +1,4 @@
-module sword-health/task
+module sword-health/notification
 
 go 1.15
 

@@ -11,7 +11,7 @@ import (
 
 func JSONMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if c.ContentType() != gin.MIMEJSON {
+		if c.ContentType() != gin.MIMEJSON && c.ContentType() != "" {
 			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": "invalid content-type"})
 			return
 		}
@@ -25,8 +25,6 @@ type UserLogged struct {
 
 func VerifyToken() gin.HandlerFunc {
 	return func(c *gin.Context) {
-
-		os.Setenv("ACCESS_SECRET", "jdnfksdmfksd")
 
 		bearer := c.GetHeader("Authorization")
 		if bearer == "" {
@@ -62,10 +60,11 @@ func VerifyToken() gin.HandlerFunc {
 
 func IsManager() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		role, ok := c.Get("role")
+		userLogged, ok := c.Get("userLogged")
+		user := userLogged.(*UserLogged)
 		if ok {
-			if role != "manager" {
-				c.AbortWithStatusJSON(http.StatusForbidden, gin.H{"error": http.StatusText(http.StatusForbidden)})
+			if user.Role != "manager" {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": http.StatusText(http.StatusUnauthorized)})
 				return
 			}
 		}

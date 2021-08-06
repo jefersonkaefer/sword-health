@@ -1,84 +1,86 @@
 package services
 
 import (
-	"sword-health/task/application/data_model"
-	"sword-health/task/application/dto"
-	"sword-health/task/application/repositories"
-	"sword-health/task/domain"
+	"fmt"
+	"sword-health/notification/application/data_model"
+	"sword-health/notification/application/dto"
+	"sword-health/notification/application/repositories"
+	"sword-health/notification/domain"
+	grpc_user "sword-health/notification/infra/grpc/client/user"
+
+	"github.com/go-redis/redis"
 )
 
 type WriteService struct {
-	taskRepository *repositories.TaskRepository
+	redis                  *redis.Client
+	userClient             *grpc_user.UserClient
+	notificationRepository repositories.Repository
 }
 
-func (WriteService) New(repository *repositories.TaskRepository) *WriteService {
+func (WriteService) New(
+	redis *redis.Client,
+	userClient *grpc_user.UserClient,
+	repository repositories.Repository,
+) *WriteService {
 	return &WriteService{
-		taskRepository: repository,
+		redis:                  redis,
+		userClient:             userClient,
+		notificationRepository: repository,
 	}
 }
 
-func (us *WriteService) Create(taskRequest dto.TaskCreateDTO) (task *data_model.Task, err error) {
+func (us *WriteService) Create(notificationDTO dto.CreateNotificationDTO) (notification *data_model.Notification, err error) {
 
-	newTask, err := domain.Create(
-		taskRequest.Summary,
-		taskRequest.OwnerId,
+	newNotification, err := domain.Create(
+		notificationDTO.NotificationType,
+		notificationDTO.Content,
+		notificationDTO.FromId,
 	)
 
-	task, err = us.taskRepository.Save(&newTask)
-
-	return task, err
+	notification, err = us.notificationRepository.Add(&newNotification)
+	
+	go us.ClearCache(notificationDTO.FromId, int(notification.ID))
+	
+	return notification, err
 }
 
-func (us *WriteService) Update(taskRequest dto.TaskUpdateDTO) (task *data_model.Task, err error) {
+func (us *WriteService) MarkAsRead(userLoggedId int, id int) (err error) {
 
-	model, err := us.taskRepository.FindOne(
-		taskRequest.Id,
-		taskRequest.UserLoggedId,
-		taskRequest.UserLoggedRole == "manager",
-	)
-
-	if err != nil {
-		return task, err
-	}
-
-	err = model.Update(
-		taskRequest.Summary,
-		taskRequest.Status,
-		taskRequest.UserLoggedId,
-		taskRequest.UserLoggedRole == "manager",
-	)
-
-	if err != nil {
-		return task, err
-	}
-
-	task, err = us.taskRepository.Save(model)
-
-	return task, err
-}
-
-func (us *WriteService) Delete(taskRequest dto.TaskUpdateDTO) (err error) {
-
-	isManager := taskRequest.UserLoggedRole == "manager"
-
-	model, err := us.taskRepository.FindOne(
-		taskRequest.Id,
-		taskRequest.UserLoggedId,
-		isManager,
-	)
+	user, err := us.userClient.Get(userLoggedId)
 
 	if err != nil {
 		return err
 	}
 
-	err = model.Delete(
-		taskRequest.UserLoggedId,
-		isManager,
-	)
+	notification, err := us.notificationRepository.FindOne(id)
 
 	if err != nil {
 		return err
 	}
 
-	return us.taskRepository.Delete(model)
+	err = notification.MarkAsRead(user.GetIsManager())
+
+	if err != nil {
+		return err
+	}
+
+	dataModel, err := us.notificationRepository.Update(notification)
+
+	go us.ClearCache(int(user.GetId()), int(dataModel.ID))
+
+	if err != nil {
+		return err
+	}
+
+	return err
+}
+
+func (us *WriteService) ClearCache(userId int, notificationId int) {
+
+	keys := []string{
+		fmt.Sprintf("notification.%d", notificationId),
+		fmt.Sprintf("notification.list.user.%d", userId),
+	}
+
+	us.redis.Del(keys...)
 }

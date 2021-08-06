@@ -17,7 +17,7 @@ type UserClient struct {
 
 var conn *grpc.ClientConn
 
-func (c UserClient) CreateConnection(host string, port int) (*UserClient, error) {
+func (c UserClient) CreateConnection(host string, port string) (*UserClient, error) {
 
 	var err error
 
@@ -51,16 +51,53 @@ func (c *UserClient) Start() UserServiceClient {
 	return c.instance
 }
 
-func (c *UserClient) Get(userId int) (user *User, err error) {
+func (c *UserClient) Login(email string, password string) (user *User, err error) {
 
 	user, err = c.instance.
-		Get(
+		CheckUser(
 			context.Background(),
-			&User{Id: int32(userId)},
+			&CheckUserRequest{Email: email, Password: password},
 		)
 
 	if err != nil {
 		fmt.Errorf("error: ", err)
 	}
 	return user, err
+}
+
+func (c *UserClient) CreateUser(
+	email string,
+	password string,
+	rePassword string,
+	firstName string,
+	lastName string,
+	role string,
+) (user *User, err error) {
+
+	user, err = c.instance.
+		CreateUser(
+			context.Background(),
+			&CreateUserRequest{
+				Email:      email,
+				Password:   password,
+				RePassword: rePassword,
+				FirstName:  firstName,
+				LastName:   lastName,
+				Role:       role,
+			},
+		)
+
+	return user, err
+}
+
+func (c *UserClient) Get(id int) (user *User, err error) {
+
+	user, err = c.instance.
+		Get(
+			context.Background(),
+			&User{Id: int32(id)},
+		)
+
+	return user, err
+
 }

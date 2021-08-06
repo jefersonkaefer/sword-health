@@ -4,8 +4,8 @@ import (
 	"sword-health/task/application/command"
 	"sword-health/task/application/repositories"
 	"sword-health/task/application/services"
-	"sword-health/task/infra/amqp"
 	grpc_user "sword-health/task/infra/grpc/client/user"
+	"sword-health/task/infra/message"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -14,10 +14,10 @@ import (
 type Container struct {
 	redis      *redis.Client
 	db         *gorm.DB
-	cmd        *command.TaskHandler
+	cmd        command.Handler
 	repository Repository
 	service    Service
-	msgBroker  *amqp.Connection
+	broker     message.Broker
 	grpc       *GrpcClient
 }
 
@@ -26,38 +26,43 @@ type GrpcClient struct {
 }
 
 type Service struct {
-	tasksWriter *services.WriteService
-	tasksRead   *services.ReadService
+	tasksWriter command.Write
+	tasksRead   command.Read
 }
 
 type Repository struct {
-	tasks *repositories.TaskRepository
+	tasks repositories.Repository
 }
 
 func (Container) New(
 	redis *redis.Client,
 	db *gorm.DB,
-	msgBroker *amqp.Connection,
+	broker message.Broker,
 	grpcClient *GrpcClient,
 ) *Container {
 	c := &Container{
-		redis:     redis,
-		db:        db,
-		msgBroker: msgBroker,
-		grpc:      grpcClient,
+		redis:  redis,
+		db:     db,
+		broker: broker,
+		grpc:   grpcClient,
 	}
 	return c.init()
 }
 
 func (c *Container) init() *Container {
 	c.repository.tasks = (repositories.TaskRepository{}).
-		New(c.redis, c.db, c.grpc.User)
+		New(
+			c.redis,
+			c.db,
+			c.grpc.User,
+		)
 
 	c.service.tasksWriter = (services.WriteService{}).
 		New(
 			c.repository.tasks,
 			c.redis,
 			c.grpc.User,
+			c.broker,
 		)
 
 	c.service.tasksRead = (services.ReadService{}).
@@ -75,6 +80,6 @@ func (c *Container) init() *Container {
 	return c
 }
 
-func (c *Container) GetHandler() *command.TaskHandler {
+func (c *Container) GetHandler() command.Handler {
 	return c.cmd
 }

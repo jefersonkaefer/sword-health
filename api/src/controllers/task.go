@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 	grpc_task "sword-health/api/grpc/task"
-	"sword-health/api/infra/amqp"
 
 	middleware "sword-health/api/http"
 	"sword-health/api/validators"
@@ -16,7 +15,6 @@ import (
 type TaskController struct {
 	Validator  *validators.JSONValidator
 	TaskClient *grpc_task.TaskClient
-	AMQ        *amqp.Connection
 }
 
 type TaskCreateRequest struct {
@@ -77,7 +75,7 @@ func (t *TaskController) Update(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, task)
+	c.JSON(http.StatusOK, task)
 }
 
 func (t *TaskController) Delete(c *gin.Context) {
@@ -87,15 +85,9 @@ func (t *TaskController) Delete(c *gin.Context) {
 	taskId := c.Param("id")
 	id, _ := strconv.Atoi(taskId)
 
-	var request TaskUpdateRequest
-
-	if errors := t.Validator.Validate(c, &request); errors != nil {
-		return
-	}
-
 	task, err := t.TaskClient.DeleteTaskRequest(
-		id,
 		int(user.Id),
+		id,
 	)
 
 	if err != nil {
@@ -104,7 +96,7 @@ func (t *TaskController) Delete(c *gin.Context) {
 		return
 	}
 
-	c.JSON(http.StatusCreated, task)
+	c.JSON(http.StatusOK, task)
 }
 
 func (t *TaskController) List(c *gin.Context) {
@@ -120,7 +112,6 @@ func (t *TaskController) List(c *gin.Context) {
 
 	list, err := t.TaskClient.ListTasksRequest(
 		user.Id,
-		user.Role,
 		int32(ownerId),
 		int32(limit),
 	)
@@ -151,6 +142,28 @@ func (t *TaskController) Get(c *gin.Context) {
 		int32(id),
 		user.Id,
 		user.Role,
+	)
+
+	if err != nil {
+		status, _ := status.FromError(err)
+		c.JSON(int(status.Code()), gin.H{"error": status.Message()})
+		return
+	}
+
+	c.JSON(http.StatusOK, task)
+}
+
+func (t *TaskController) Close(c *gin.Context) {
+
+	userLogged, _ := c.Get("userLogged")
+	user := userLogged.(*middleware.UserLogged)
+
+	taskId := c.Param("id")
+	id, _ := strconv.Atoi(taskId)
+
+	task, err := t.TaskClient.CloseTaskRequest(
+		int(user.Id),
+		id,
 	)
 
 	if err != nil {

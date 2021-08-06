@@ -2,11 +2,12 @@ package main
 
 import (
 	"log"
+	"os"
 	"sword-health/task/application"
 	"sword-health/task/application/data_model"
-	"sword-health/task/infra/amqp"
 	grpc_task "sword-health/task/infra/grpc"
 	grpc_user "sword-health/task/infra/grpc/client/user"
+	"sword-health/task/infra/message"
 
 	"github.com/go-redis/redis"
 	"gorm.io/driver/mysql"
@@ -18,22 +19,22 @@ var container *application.Container
 func main() {
 
 	redisCli := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: "",
 		DB:       0,
 	})
 
-	amqp := (amqp.Connection{}).New("guest", "guest", "rabbitmq", 5672)
+	broker := (message.AMQP{}).New(os.Getenv("BROKER_DSN"))
 
 	grpc := grpc_task.Server{}
 
-	dsn := "root:swt4sks@tcp(mysql:3306)/sw_tasks?charset=utf8mb4&parseTime=True&loc=Local"
+	dsn := os.Getenv("DB_TASKS_DSN")
 
 	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
 
 	grpcClients := grpcConnection()
 
-	container = (application.Container{}).New(redisCli, db, amqp, grpcClients)
+	container = (application.Container{}).New(redisCli, db, broker, grpcClients)
 
 	err = db.AutoMigrate(&data_model.Task{})
 
@@ -41,9 +42,9 @@ func main() {
 		log.Fatalln("Error: ", err)
 	}
 
-	go amqp.Consume("task", container.GetHandler(), "task")
+	go broker.Consume(container.GetHandler(), "task", "task")
 
-	grpc.Start(container.GetHandler(), 5000)
+	grpc.Start(container.GetHandler(), os.Getenv("GRPC_SERVER_PORT"))
 }
 
 func grpcConnection() *application.GrpcClient {
@@ -52,7 +53,10 @@ func grpcConnection() *application.GrpcClient {
 		User: &grpc_user.UserClient{},
 	}
 
-	grpc.User.CreateConnection("user", 5000)
+	grpc.User.CreateConnection(
+		os.Getenv("GRPC_USER_CLIENT_HOSTNAME"),
+		os.Getenv("GRPC_USER_CLIENT_PORT"),
+	)
 	grpc.User.Start()
 
 	return &grpc

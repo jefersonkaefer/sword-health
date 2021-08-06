@@ -41,4 +41,5 @@ service TaskService {
     rpc FindOneTaskRequest(TaskRequest) returns (Task) {}
     rpc UpdateTaskRequest(TaskRequest) returns (Task) {}
     rpc DeleteTaskRequest(TaskRequest) returns (Task) {}
+    rpc CloseTaskRequest(TaskRequest) returns (Task) {}
 }

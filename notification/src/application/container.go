@@ -1,10 +1,12 @@
 package application
 
 import (
-	"sword-health/task/application/command"
-	"sword-health/task/application/repositories"
-	"sword-health/task/application/services"
-	"sword-health/task/infra/amqp"
+	"sword-health/notification/application/command"
+	"sword-health/notification/application/repositories"
+	"sword-health/notification/application/services"
+	"sword-health/notification/infra/message"
+
+	grpc_user "sword-health/notification/infra/grpc/client/user"
 
 	"github.com/go-redis/redis"
 	"gorm.io/gorm"
@@ -13,43 +15,52 @@ import (
 type Container struct {
 	redis      *redis.Client
 	db         *gorm.DB
-	cmd        *command.NotificationHandler
+	cmd        command.Handler
 	repository Repository
 	service    Service
-	msgBroker  *amqp.Connection
+	broker     message.Broker
+	grpc       *GrpcClient
 }
 
 type Service struct {
-	notificationWriter *services.WriteService
-	notificationRead   *services.ReadService
+	notificationWriter command.Write
+	notificationRead   command.Read
 }
 
 type Repository struct {
-	notification *repositories.NotificationRepository
+	notification repositories.Repository
+}
+
+type GrpcClient struct {
+	User *grpc_user.UserClient
 }
 
 func (Container) New(
 	redis *redis.Client,
 	db *gorm.DB,
-	msgBroker *amqp.Connection,
+	broker message.Broker,
+	grpcClient *GrpcClient,
 ) *Container {
+
 	c := &Container{
-		redis:     redis,
-		db:        db,
-		msgBroker: msgBroker,
+		redis:  redis,
+		db:     db,
+		broker: broker,
+		grpc:   grpcClient,
 	}
+
 	return c.init()
 }
 
 func (c *Container) init() *Container {
 	c.repository.notification = (repositories.NotificationRepository{}).
-		New(c.redis, c.db)
+		New(c.db)
 
 	c.service.notificationWriter = (services.WriteService{}).
-		New(c.repository.notification)
+		New(c.redis, c.grpc.User, c.repository.notification)
 
 	c.service.notificationRead = (services.ReadService{}).
-		New(c.repository.notification)
+		New(c.redis, c.grpc.User, c.repository.notification)
 
 	c.cmd = (command.NotificationHandler{}).
 		New(
@@ -59,6 +70,6 @@ func (c *Container) init() *Container {
 	return c
 }
 
-func (c *Container) GetHandler() *command.NotificationHandler {
+func (c *Container) GetHandler() command.Handler {
 	return c.cmd
 }

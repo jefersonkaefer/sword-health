@@ -5,7 +5,6 @@ import (
 	"strconv"
 	grpc_notification "sword-health/api/grpc/notification"
 	middleware "sword-health/api/http"
-	"sword-health/api/infra/amqp"
 
 	"sword-health/api/validators"
 
@@ -16,7 +15,6 @@ import (
 type NotificationController struct {
 	Validator          *validators.JSONValidator
 	NotificationClient *grpc_notification.NotificationClient
-	AMQP               *amqp.Connection
 }
 
 func (u *NotificationController) Get(c *gin.Context) {
@@ -45,7 +43,17 @@ func (u *NotificationController) List(c *gin.Context) {
 	userLogged, _ := c.Get("userLogged")
 	user := userLogged.(*middleware.UserLogged)
 
-	notifications, err := u.NotificationClient.List(int(user.Id))
+	from := c.Query("from_id")
+	fromId, _ := strconv.Atoi(from)
+
+	limitParam := c.Query("limit")
+	limit, _ := strconv.Atoi(limitParam)
+
+	notifications, err := u.NotificationClient.List(
+		int(user.Id),
+		fromId,
+		limit,
+	)
 
 	if err != nil {
 		status, ok := status.FromError(err)

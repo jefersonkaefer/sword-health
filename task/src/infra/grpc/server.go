@@ -20,10 +20,10 @@ import (
 
 type Server struct {
 	UnimplementedTaskServiceServer
-	cmdService *command.TaskHandler
+	cmdService command.Handler
 }
 
-func (s *Server) Start(cmdService *command.TaskHandler, port int) {
+func (s *Server) Start(cmdService command.Handler, port string) {
 
 	s.cmdService = cmdService
 
@@ -40,7 +40,7 @@ func (s *Server) Start(cmdService *command.TaskHandler, port int) {
 		Timeout:               1 * time.Second,
 	}
 
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%s", port))
 
 	if err != nil {
 		fmt.Println("failed to listen: %v", err)
@@ -88,8 +88,8 @@ func (s *Server) FindOneTaskRequest(ctx context.Context, in *TaskRequest) (task 
 	var taskDataModel *data_model.Task
 
 	taskDataModel, err = s.cmdService.Read().FindOne(
-		int(in.GetId()),
 		int(in.GetUserLoggedId()),
+		int(in.GetId()),
 	)
 
 	if err != nil {
@@ -162,12 +162,25 @@ func (s *Server) UpdateTaskRequest(ctx context.Context, in *TaskRequest) (*Task,
 
 func (s *Server) DeleteTaskRequest(ctx context.Context, in *TaskRequest) (*Task, error) {
 
-	taskRequest := dto.TaskUpdateDTO{
-		Id:           int(in.GetId()),
-		UserLoggedId: int(in.GetUserLoggedId()),
+	err := s.cmdService.Write().Delete(
+		int(in.GetUserLoggedId()),
+		int(in.GetId()),
+	)
+
+	if err != nil {
+		return &Task{}, status.Error(http.StatusBadRequest, err.Error())
 	}
 
-	err := s.cmdService.Write().Delete(taskRequest)
+	return &Task{}, nil
+
+}
+
+func (s *Server) CloseTaskRequest(ctx context.Context, in *TaskRequest) (task *Task, err error) {
+
+	err = s.cmdService.Write().Close(
+		int(in.GetUserLoggedId()),
+		int(in.GetId()),
+	)
 
 	if err != nil {
 		return &Task{}, status.Error(http.StatusBadRequest, err.Error())

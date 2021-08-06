@@ -1,10 +1,12 @@
 package repositories
 
 import (
+	"errors"
 	"sword-health/user/application/data_model"
 	"sword-health/user/domain"
 
 	"github.com/go-redis/redis"
+	"github.com/go-sql-driver/mysql"
 	"gorm.io/gorm"
 )
 
@@ -23,9 +25,13 @@ func (UserRepository) New(redis *redis.Client, db *gorm.DB) *UserRepository {
 func (r *UserRepository) Add(u *domain.UserModel) (user *data_model.User, err error) {
 	user = u.GetDataModel()
 
-	r.db.Save(user)
+	err = r.db.Save(user).Error
+	var mysqlErr *mysql.MySQLError
 
-	return user, r.db.Error
+	if errors.As(err, &mysqlErr) && mysqlErr.Number == 1062 {
+		err = errors.New("This user already exists.")
+	}
+	return user, err
 }
 
 func (r *UserRepository) FindByEmail(email string) *domain.UserModel {

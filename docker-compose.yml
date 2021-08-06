@@ -4,7 +4,7 @@ services:
 
   mysql:
     hostname: mysql
-    container_name: sw_task_mysql
+    container_name: sword_task_mysql
     image: sw/mysql
     build: 
       context: ./mysql
@@ -15,63 +15,67 @@ services:
 
   rabbitmq:
     image: rabbitmq:management-alpine
-    container_name: sw_task_rabbitmq
+    container_name: sword_task_rabbitmq
     hostname: rabbitmq
     ports:
       - 15672:15672
 
   redis:
     image: redis
-    container_name: fs_redis
+    container_name: sword_task_redis
     hostname: redis
   
   api-manager:
     hostname: api
-    container_name: sw_task_api
+    container_name: sword_task_api
     build:
-      context: .
+      context: ./go
     image: sword-health/go
     env_file:
       .env
-    networks: 
-      - backend
     volumes: 
-      - "../api/src:/go/src"
+      - "./api/src:/go/src"
     ports: 
       - "8000:8000"
     command:
       - air
-
-  notification:
-    hostname: notification
-    container_name: sw_task_notification
+  
+  task:
+    hostname: task
+    container_name: sword_task_task
     build:
-      context: .
+      context: ./go
     image: sword-health/go
     env_file:
       .env
-    networks: 
-      - backend
     volumes: 
-      - "../notification/src:/go/src"
+      - "./task/src:/go/src"
+    command:
+      - air
+        
+  notification:
+    hostname: notification
+    container_name: sword_task_notification
+    build:
+      context: ./go
+    image: sword-health/go
+    env_file:
+      .env
+    volumes: 
+      - "./notification/src:/go/src"
     command:
       - air
   
   user:
     hostname: user
-    container_name: sw_task_user
+    container_name: sword_task_user
     build:
-      context: .
+      context: ./go
     image: sword-health/go
     env_file:
       .env
-    networks: 
-      - backend
     volumes: 
-      - "../user/src:/go/src"
+      - "./user/src:/go/src"
     command:
       - air
-networks:
-  default:
-    external: true
-    name: sw_task_be
+      

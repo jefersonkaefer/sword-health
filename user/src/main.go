@@ -2,9 +2,9 @@ package main
 
 import (
 	"log"
+	"os"
 	"sword-health/user/application"
 	"sword-health/user/application/data_model"
-	"sword-health/user/infra/amqp"
 	grpc_user "sword-health/user/infra/grpc"
 
 	"github.com/go-redis/redis"
@@ -15,18 +15,17 @@ import (
 func main() {
 
 	redisCli := redis.NewClient(&redis.Options{
-		Addr:     "redis:6379",
+		Addr:     os.Getenv("REDIS_ADDR"),
 		Password: "",
 		DB:       0,
 	})
 
-	amqp := (amqp.Connection{}).New("guest", "guest", "rabbitmq", 5672)
-
 	grpc := grpc_user.Server{}
 
-	dsn := "root:swt4sks@tcp(mysql:3306)/sw_users?charset=utf8mb4&parseTime=True&loc=Local"
-
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(
+		mysql.Open(os.Getenv("DB_USERS_DSN")), 
+		&gorm.Config{},
+	)
 
 	err = db.AutoMigrate(&data_model.User{})
 
@@ -34,9 +33,7 @@ func main() {
 		log.Fatalln("Error: ", err)
 	}
 
-	container := (application.Container{}).New(redisCli, db, amqp)
+	container := (application.Container{}).New(redisCli, db)
 
-	go amqp.Consume("user", container.GetHandler(), "user")
-
-	grpc.Start(container.GetHandler(), 5000)
+	grpc.Start(container.GetHandler(), os.Getenv("GRPC_SERVER_PORT"))
 }
