@@ -42,8 +42,6 @@ func main() {
 		log.Fatalln("Error: ", err)
 	}
 
-	go broker.Consume(container.GetHandler(), "task", "task")
-
 	grpc.Start(container.GetHandler(), os.Getenv("GRPC_SERVER_PORT"))
 }
 
