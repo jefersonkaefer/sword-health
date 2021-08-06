@@ -13,6 +13,6 @@ if [ "${1#-}" != "${1}" ] || [ -z "$(command -v "${1}")" ];
     set -- $@
 fi
 
-sleep 10
+sleep 30
 
 exec $@
